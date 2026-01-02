@@ -1,24 +1,26 @@
 ﻿# 体面研究生饭（PWA）
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/yourname/ti-mian-research-meals)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/xxw02121/chifan)
 
 一键生成一荤一素+米饭的健康家常菜单，适配手机浏览器 / 添加到主屏幕离线可用，内置 DeepSeek 代理改写做法（未配置也可用）。
 
 ## 本地运行
-1. 安装依赖：`npm install`
-2. 启动开发：`npm run dev`
-3. 浏览器打开：`http://localhost:3000`
+1. 安装依赖：
+pm install
+2. 启动开发：
+pm run dev
+3. 浏览器打开：http://localhost:3000
 
 ## 环境变量
 在本地或 Vercel 设置：
-- `DEEPSEEK_API_KEY`（必填才能调用 DeepSeek，不填则自动回退到本地菜谱步骤）
-- `DEEPSEEK_BASE_URL`（可选，默认 `https://api.deepseek.com`）
-- `DEEPSEEK_MODEL`（可选，默认 `deepseek-chat`）
+- DEEPSEEK_API_KEY（必填才能调用 DeepSeek，不填则自动回退到本地菜谱步骤）
+- DEEPSEEK_BASE_URL（可选，默认 https://api.deepseek.com）
+- DEEPSEEK_MODEL（可选，默认 deepseek-chat）
 
 ## 部署到 Vercel（最少操作）
 1. 点击顶部 **Deploy with Vercel** 按钮（或在 Vercel 里新建项目，仓库指向本项目代码）。
 2. 授权 GitHub 并导入仓库。
-3. 在 Vercel 项目设置里添加环境变量：`DEEPSEEK_API_KEY`（以及可选 BASE_URL/MODEL）。
+3. 在 Vercel 项目设置里添加环境变量：DEEPSEEK_API_KEY（以及可选 BASE_URL/MODEL）。
 4. 点击 Deploy，等待构建完成即可访问。
 
 > 提示：上面的按钮仓库地址为示例，请将代码推到自己的 GitHub 后再用按钮导入，或在 Vercel 控制台选择本地上传。
@@ -35,6 +37,6 @@
 - 偏好：不吃辣/牛/鱼、预算省一点，最近吃过有权重衰减；数据存 localStorage。
 
 ## FAQ
-- **为什么不能把 API Key 放前端？** Key 暴露在前端会被抓包盗用导致费用风险，已通过 Next.js API Route `/api/llm/rewrite` 代理调用，Key 仅存放在服务端环境变量。
-- **没配 Key 能用吗？** 可以。未配置 `DEEPSEEK_API_KEY` 时，自动使用本地菜谱的固定步骤，不会影响生成菜单。
+- **为什么不能把 API Key 放前端？** Key 暴露在前端会被抓包盗用导致费用风险，已通过 Next.js API Route /api/llm/rewrite 代理调用，Key 仅存放在服务端环境变量。
+- **没配 Key 能用吗？** 可以。未配置 DEEPSEEK_API_KEY 时，自动使用本地菜谱的固定步骤，不会影响生成菜单。
 - **离线可用程度？** 首次打开后，静态资源、首页/周计划页面会被 service worker 缓存。无网络时仍能查看缓存页面和本地兜底菜谱。若清理缓存需重新联网加载一次。
