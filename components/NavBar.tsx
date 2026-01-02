@@ -13,6 +13,9 @@ export default function NavBar() {
       <Link className={pathname.startsWith('/weekly') ? 'active' : ''} href="/weekly">
         <span>本周计划</span>
       </Link>
+      <Link className={pathname.startsWith('/favorites') ? 'active' : ''} href="/favorites">
+        <span>收藏</span>
+      </Link>
       <Link className={pathname.startsWith('/recipe') ? 'active' : ''} href="/recipe/stirfried-egg-tomato">
         <span>菜谱库</span>
       </Link>
