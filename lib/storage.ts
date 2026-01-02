@@ -5,6 +5,7 @@ const DISLIKE_KEY = 'tm-dislikes';
 const HISTORY_KEY = 'tm-history';
 const WEEKLY_KEY = 'tm-weekly';
 const PREF_KEY = 'tm-pref';
+const CUSTOM_KEY = 'tm-custom-recipes';
 
 export function readLocal<T>(key: string, fallback: T): T {
   if (typeof window === 'undefined') return fallback;
@@ -81,4 +82,16 @@ export function loadPreferences(): Preferences {
     noFish: false,
     moreBudget: false
   });
+}
+
+export function loadCustomRecipes(): import('./types').Recipe[] {
+  return readLocal<import('./types').Recipe[]>(CUSTOM_KEY, []);
+}
+
+export function addCustomRecipe(recipe: import('./types').Recipe) {
+  const list = loadCustomRecipes();
+  const exists = list.find(r => r.id === recipe.id);
+  const next = exists ? list.map(r => (r.id === recipe.id ? recipe : r)) : [...list, recipe];
+  writeLocal(CUSTOM_KEY, next);
+  return next;
 }

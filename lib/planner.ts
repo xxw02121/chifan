@@ -1,10 +1,12 @@
-﻿import { DailyPlan, Preferences, Recipe, ShoppingGroup, ShoppingItem, WeeklyPlan } from './types';
+import { DailyPlan, Preferences, Recipe, ShoppingGroup, ShoppingItem, WeeklyPlan } from './types';
 import { proteinRecipes, vegRecipes } from './recipes';
 
 type PlannerOptions = {
   recentIds?: string[];
   dislikedIds?: string[];
   preferences?: Preferences;
+  customProtein?: Recipe[];
+  customVeg?: Recipe[];
 };
 
 const defaultPrefs: Preferences = {
@@ -25,7 +27,6 @@ function weightRecipe(recipe: Recipe, opts: PlannerOptions, usedItems: Set<strin
   if (prefs.noFish && (recipe.tags.includes('鱼') || recipe.name.includes('鱼'))) weight *= 0.2;
   if (prefs.moreBudget && (recipe.name.includes('牛') || recipe.name.includes('虾') || recipe.name.includes('三文鱼'))) weight *= 0.3;
 
-  // 复用食材加权：看 ingredients item 名
   const overlap = recipe.ingredients.some(i => usedItems.has(i.item));
   if (overlap) weight *= 1.25;
 
@@ -44,12 +45,14 @@ function weightedPick(list: Recipe[], weights: number[]): Recipe | undefined {
 }
 
 export function daily(opts: PlannerOptions = {}): DailyPlan {
-  const used = new Set<string>();
-  const proteinWeights = proteinRecipes.map(r => weightRecipe(r, opts, used));
-  let protein = weightedPick(proteinRecipes, proteinWeights) || proteinRecipes[0];
+  const proteins = [...proteinRecipes, ...(opts.customProtein || [])];
+  const vegs = [...vegRecipes, ...(opts.customVeg || [])];
 
-  // 选素菜时加入时间和油的总量限制、避免重复
-  const vegCandidates = vegRecipes.filter(v => {
+  const used = new Set<string>();
+  const proteinWeights = proteins.map(r => weightRecipe(r, opts, used));
+  const protein = weightedPick(proteins, proteinWeights) || proteins[0];
+
+  const vegCandidates = vegs.filter(v => {
     const totalTime = v.time_min + protein.time_min;
     const totalOil = v.oil_tsp + protein.oil_tsp;
     const avoidRecent = opts.recentIds?.includes(v.id);
@@ -57,11 +60,10 @@ export function daily(opts: PlannerOptions = {}): DailyPlan {
   });
   const vegWeights = vegCandidates.map(r => {
     const baseWeight = weightRecipe(r, opts, used);
-    // 若蛋白较咸/重（豆瓣、酱香）则优先清爽的素菜
     const light = r.tags.some(t => ['清爽', '低油', '凉拌'].some(k => t.includes(k)));
     return baseWeight * (light ? 1.1 : 1);
   });
-  const fallbackVeg = vegCandidates.find(v => v.time_min + protein.time_min <= 25 && v.oil_tsp + protein.oil_tsp <= 2.5) || vegRecipes[0];
+  const fallbackVeg = vegCandidates.find(v => v.time_min + protein.time_min <= 25 && v.oil_tsp + protein.oil_tsp <= 2.5) || vegs[0];
   const veg = weightedPick(vegCandidates, vegWeights) || fallbackVeg;
 
   return { protein, veg };
@@ -72,21 +74,22 @@ export function weekly(opts: PlannerOptions = {}): WeeklyPlan {
   const usedItems = new Set<string>();
   const dayNames = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
   const history: string[] = opts.recentIds ? [...opts.recentIds] : [];
+  const proteins = [...proteinRecipes, ...(opts.customProtein || [])];
+  const vegs = [...vegRecipes, ...(opts.customVeg || [])];
 
   for (let i = 0; i < 7; i++) {
     const prefs = { ...opts, preferences: opts.preferences };
-    const proteinWeights = proteinRecipes.map(r => weightRecipe(r, prefs, usedItems));
-    // 过滤时间、油量在素菜选择时再控制
-    let protein = weightedPick(proteinRecipes, proteinWeights) || proteinRecipes[i % proteinRecipes.length];
+    const proteinWeights = proteins.map(r => weightRecipe(r, prefs, usedItems));
+    let protein = weightedPick(proteins, proteinWeights) || proteins[i % proteins.length];
 
-    const vegCandidates = vegRecipes.filter(v => {
+    const vegCandidates = vegs.filter(v => {
       const totalTime = v.time_min + protein.time_min;
       const totalOil = v.oil_tsp + protein.oil_tsp;
       const recent = history.slice(-3).includes(v.id) || history.slice(-3).includes(protein.id);
       return totalTime <= 25 && totalOil <= 2.5 && !recent;
     });
     const vegWeights = vegCandidates.map(v => weightRecipe(v, prefs, usedItems));
-    const fallbackVeg = vegCandidates.find(v => v.time_min + protein.time_min <= 25 && v.oil_tsp + protein.oil_tsp <= 2.5) || vegRecipes[i % vegRecipes.length];
+    const fallbackVeg = vegCandidates.find(v => v.time_min + protein.time_min <= 25 && v.oil_tsp + protein.oil_tsp <= 2.5) || vegs[i % vegs.length];
     const veg = weightedPick(vegCandidates, vegWeights) || fallbackVeg;
 
     days.push({ day: dayNames[i], protein, veg });
@@ -129,8 +132,10 @@ export function buildShopping(days: WeeklyPlan['days']): ShoppingGroup[] {
   });
 
   const categories = ['肉蛋类', '蔬菜类', '调味基础类'];
-  return categories.map(cat => ({
-    category: cat,
-    items: Array.from(map.values()).filter(i => i.category === cat)
-  })).filter(g => g.items.length > 0);
+  return categories
+    .map(cat => ({
+      category: cat,
+      items: Array.from(map.values()).filter(i => i.category === cat)
+    }))
+    .filter(g => g.items.length > 0);
 }

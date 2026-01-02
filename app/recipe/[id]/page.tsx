@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { getRecipeById } from '../../../lib/recipes';
 import { Recipe } from '../../../lib/types';
 import { rewriteRecipe, RewriteResponse } from '../../../lib/llm';
-import { toggleFavorite, getFavorites, addDislike } from '../../../lib/storage';
+import { toggleFavorite, getFavorites, addDislike, loadCustomRecipes } from '../../../lib/storage';
 
 export default function RecipePage() {
   const params = useParams();
@@ -23,7 +23,12 @@ export default function RecipePage() {
 
   useEffect(() => {
     const r = getRecipeById(id);
-    if (r) setRecipe(r);
+    if (r) {
+      setRecipe(r);
+    } else {
+      const custom = loadCustomRecipes().find(c => c.id === id);
+      if (custom) setRecipe(custom);
+    }
   }, [id]);
 
   const handleRewrite = async () => {

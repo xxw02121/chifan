@@ -1,16 +1,21 @@
 ﻿"use client";
 
 import { useEffect, useState } from 'react';
-import { WeeklyPlan } from '../../lib/types';
-import { weekly } from '../../lib/planner';
-import { getActiveDislikes, getHistory, loadPreferences, loadWeekly, saveWeekly } from '../../lib/storage';
+import { Recipe, WeeklyPlan } from '../../lib/types';
+import { weekly, daily, buildShopping } from '../../lib/planner';
+import { getActiveDislikes, getHistory, loadPreferences, loadWeekly, saveWeekly, loadCustomRecipes } from '../../lib/storage';
 import Link from 'next/link';
 
 export default function WeeklyPage() {
   const [plan, setPlan] = useState<WeeklyPlan | null>(null);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const [customProtein, setCustomProtein] = useState<Recipe[]>([]);
+  const [customVeg, setCustomVeg] = useState<Recipe[]>([]);
 
   useEffect(() => {
+    const custom = loadCustomRecipes();
+    setCustomProtein(custom.filter(c => c.type === 'protein'));
+    setCustomVeg(custom.filter(c => c.type === 'veg'));
     const stored = loadWeekly();
     if (stored) setPlan(stored);
     if (!stored) generate();
@@ -21,9 +26,21 @@ export default function WeeklyPage() {
     const recent = getHistory();
     const dislikes = getActiveDislikes();
     const prefs = loadPreferences();
-    const next = weekly({ recentIds: recent, dislikedIds: dislikes, preferences: prefs });
+    const next = weekly({ recentIds: recent, dislikedIds: dislikes, preferences: prefs, customProtein, customVeg });
     setPlan(next);
     saveWeekly(next);
+  };
+
+  const regenerateDay = (dayIndex: number) => {
+    if (!plan) return;
+    const prefs = loadPreferences();
+    const recent = getHistory();
+    const dislikes = getActiveDislikes();
+    const nextDay = daily({ recentIds: recent, dislikedIds: dislikes, preferences: prefs, customProtein, customVeg });
+    const newDays = plan.days.map((d, idx) => (idx === dayIndex ? { ...d, protein: nextDay.protein, veg: nextDay.veg } : d));
+    const nextPlan: WeeklyPlan = { days: newDays, shoppingList: buildShopping(newDays) };
+    setPlan(nextPlan);
+    saveWeekly(nextPlan);
   };
 
   const copyList = async () => {
@@ -53,13 +70,16 @@ export default function WeeklyPage() {
         </div>
       </div>
 
-      {plan.days.map(d => (
+      {plan.days.map((d, idx) => (
         <div key={d.day} className="card">
           <div className="row">
             <div style={{ fontWeight: 700 }}>{d.day}</div>
-            <button className="btn secondary" style={{ padding: '6px 10px' }} onClick={() => setExpanded(p => ({ ...p, [d.day]: !p[d.day] }))}>
-              {expanded[d.day] ? '收起' : '展开'}
-            </button>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button className="btn secondary" style={{ padding: '6px 10px' }} onClick={() => regenerateDay(idx)}>换这天</button>
+              <button className="btn secondary" style={{ padding: '6px 10px' }} onClick={() => setExpanded(p => ({ ...p, [d.day]: !p[d.day] }))}>
+                {expanded[d.day] ? '收起' : '展开'}
+              </button>
+            </div>
           </div>
           <div className="small">荤：{d.protein.name} · {d.protein.oil_tsp} 茶匙 · {d.protein.time_min} 分钟</div>
           <div className="small">素：{d.veg.name} · {d.veg.oil_tsp} 茶匙 · {d.veg.time_min} 分钟</div>

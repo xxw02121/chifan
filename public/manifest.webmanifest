@@ -1,6 +1,6 @@
 ﻿{
-  "name": "体面研究生饭（PWA）",
-  "short_name": "体面饭",
+  "name": "简单食谱（PWA）",
+  "short_name": "简单食谱",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#f8fafc",
